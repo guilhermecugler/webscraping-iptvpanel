@@ -20,7 +20,7 @@ cookies = ast.literal_eval(os.getenv("cookies"))
 url = os.getenv("urlPanel")
 
 headers = {
-    'authority': 'painelhls1.net',
+    'authority': url,
     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
     'accept-language': 'en-US,en;q=0.9,pt;q=0.8,ja;q=0.7',
     'referer': url,
@@ -131,7 +131,7 @@ for client in clientsJson['data']: #remove itens do json não necessários
     del client[3]
    
     client[2] = client[2][:10] + " " + client[2][10:]
-    client[2] = datetime.strptime(client[2], '%d/%m/%Y %H:%M') #transforma data e hora em python
+    client[2] = datetime.strptime(client[2], '%d/%m/%Y %H:%M')
 
     with open('clientes_ativos.json', 'w') as f:
         json.dump(clientsJson, f, indent=2, default=str)
@@ -139,7 +139,6 @@ for client in clientsJson['data']: #remove itens do json não necessários
 for clientId in clientsJson['data']:
     urlClient = url+'/clients/edit/'+clientId[0]
     responseClient = requests.get(urlClient, cookies=cookies)
-   # print(urlClient)
     soupClient = BeautifulSoup(responseClient.content, 'html.parser') 
     telefone = soupClient.find("input", {'name': "phone_number"}).attrs['value']
     expiredate = clientId[2].date()
@@ -149,7 +148,7 @@ for clientId in clientsJson['data']:
     if(delta.days <= 2 and telefone!=""):
         url = f"https://web.whatsapp.com/send/?phone=55{telefone}&text=Ol\xe1,+seus+canais+vencem+dia+*{strexpiredate}*&type=phone_number&app_absent=0"
         print(url)
-        with open('teste.txt', 'a', encoding='utf-8') as outfile:
+        with open('urlWhatsApp.txt', 'a', encoding='utf-8') as outfile:
             outfile.write(url+"\n")
 
 
