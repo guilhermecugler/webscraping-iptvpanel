@@ -6,7 +6,8 @@ urlWhatsApp.txt
 clientes_ativos.json
 # C extensions
 *.so
-
+PyWhatKit_DB.txt
+env.py
 # Distribution / packaging
 .Python
 build/

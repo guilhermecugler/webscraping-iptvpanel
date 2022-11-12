@@ -1,3 +1,7 @@
+#   Esse arquivo faz o scrap do painel de iptv, 
+#   usa a api oficial do facebook e envia mensagem para os clientes que
+#   vencem em menos de 2 dias
+
 from http import client
 from textwrap import indent
 import datetime
@@ -8,16 +12,12 @@ import requests
 import re
 from datetime import datetime
 from datetime import date
-from dotenv import load_dotenv
-import os
 import ast
+from env import *
 
+cookies1 = cookies
 
-load_dotenv()
-
-cookies = ast.literal_eval(os.getenv("cookies"))
-
-url = os.getenv("urlPanel")
+url = urlPanel
 
 headers = {
     'authority': url,
@@ -107,11 +107,9 @@ data = {
     'reseller_id': '-1',
 }
 
+apiClients = url+'/clients/api/?get_clients'
 
-
-urlClients = url+'/clients/api/?get_clients'
-
-responseClients = requests.post(urlClients, cookies=cookies, headers=headers, data=data)
+responseClients = requests.post(apiClients, cookies=cookies1, headers=headers, data=data)
 
 soup = BeautifulSoup(responseClients.content, 'html.parser') 
 
@@ -136,24 +134,52 @@ for client in clientsJson['data']: #remove itens do json não necessários
     with open('clientes_ativos.json', 'w') as f:
         json.dump(clientsJson, f, indent=2, default=str)
 
+phone_number_id = phone_number_id_env
+access_token = access_token_env
+headersWhatsApp = {
+    "Authorization": f"Bearer {access_token}",
+    'Content-Type': 'application/json'
+}
+
+
 for clientId in clientsJson['data']:
+
     urlClient = url+'/clients/edit/'+clientId[0]
-    responseClient = requests.get(urlClient, cookies=cookies)
+    responseClient = requests.get(urlClient, cookies=cookies1)
     soupClient = BeautifulSoup(responseClient.content, 'html.parser') 
     telefone = soupClient.find("input", {'name': "phone_number"}).attrs['value']
     expiredate = clientId[2].date()
     delta = expiredate - date.today()
-    strexpiredate = clientId[2].strftime("%d/%m/%Y+às+%H:%M")
+    strexpiredate = clientId[2].strftime("%d/%m/%Y às %H:%M")
+
+    recipient_phone_number = f'55{telefone}'
+
+    msg_body_params = f'*{strexpiredate}*'
+
 
     if(delta.days <= 2 and telefone!=""):
-        url = f"https://web.whatsapp.com/send/?phone=55{telefone}&text=Ol\xe1,+seus+canais+vencem+dia+*{strexpiredate}*&type=phone_number&app_absent=0"
-        print(url)
-        with open('urlWhatsApp.txt', 'a', encoding='utf-8') as outfile:
-            outfile.write(url+"\n")
-
-
-
-
-#print(json.dumps(clientsJson, indent=2))
-
-#whatsapp://send/?phone=55{telefone}&text=Ol\xe1,+seus+canais+vencem+dia+*{strexpiredate}*&type=phone_number&app_absent=0
+        json_data = {
+            'messaging_product': 'whatsapp',
+            'to': recipient_phone_number,
+            'type': 'template',
+            'template': {
+                'name': 'aviso_clientes',
+                'language': {
+                    'code': 'pt_BR',
+                    },
+                    'components': 
+                    [
+                        {
+                            'type': 'body',
+                            'parameters': [
+                                {
+                                    'type': 'text',
+                                    'text': msg_body_params
+                                }
+                            ]
+                            }
+                        ]
+                }
+            }
+        responseWhatsApp = requests.post(f'https://graph.facebook.com/v15.0/{phone_number_id}/messages', headers=headersWhatsApp, json=json_data)
+        print(responseWhatsApp.text, msg_body_params)
